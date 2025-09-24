@@ -43,5 +43,17 @@ services:
         "python /app/schedule.py && exec rqscheduler -H redis -p 6379 -i 1",
       ]
 
+  rqdashboard:
+    image: eoranged/rq-dashboard:latest
+    container_name: usde_tracker_rqdashboard
+    depends_on:
+      - redis
+    environment:
+      RQ_DASHBOARD_REDIS_URL: redis://redis:6379/0
+      RQ_DASHBOARD_USERNAME: admin
+      RQ_DASHBOARD_PASSWORD: admin
+    ports:
+      - "9181:9181"
+
 volumes:
   pgdata:

@@ -6,22 +6,26 @@ Built with **Python**, **RQ**/**rq-scheduler**, **PostgreSQL**, **Redis**, and *
 ## Overview
 
 **Services**
+
 - **Postgres** – data store.
 - **Redis** – queues + scheduler storage.
 - **Worker** – runs RQ worker listening to queues.
 - **Scheduler** – enqueues periodic jobs (every 15s by default).
 
 **Queues**
-1. `live` – periodic trigger (scheduler calls `sync_transfers`).
+
+1. `sync_transfers` – periodic trigger (scheduler calls).
 2. `parse_transfer` – parses one raw log → writes 2 deltas (+to / −from) → enqueues balance updates.
 3. `calc_balance` (planned) – recomputes balance for one address.
 
 **Database tables**
+
 - `sync_state(id SMALLINT PRIMARY KEY, last_block BIGINT NOT NULL)` – sync cursor (last fully processed block).
 - `deltas(block_number BIGINT, tx_hash TEXT, log_index INT, address BYTEA, amount NUMERIC(78,0), PRIMARY KEY(block_number, tx_hash, log_index, address))`
 - `balances(address BYTEA PRIMARY KEY, balance NUMERIC(78,0) NOT NULL)`
 
 **Idempotency**
+
 - `deltas` PK prevents duplicates.
 - Balances recomputed per address (UPSERT).
 
@@ -100,6 +104,23 @@ docker compose -f infra/compose.yml up -d --build
 
 ---
 
+## Monitoring Queues and Jobs
+
+We use [RQ Dashboard](https://github.com/Parallels/rq-dashboard) to monitor queues, workers, and jobs.
+
+### Start Dashboard
+
+```bash
+docker compose -f infra/compose.yml up -d rqdashboard
+```
+
+Open http://localhost:9181 in your browser.
+
+Default login credentials:
+
+- Username: admin
+- Password: admin
+
 ## Postgres access
 
 Open a psql shell:
@@ -119,7 +140,7 @@ INSERT INTO sync_state(id, last_block) VALUES (1, 0);
 
 ## How it works (flow)
 
-1. **Scheduler** (rq-scheduler) enqueues `jobs.sync_transfers` into queue `live` every 15s.
+1. **Scheduler** (rq-scheduler) enqueues `jobs.sync_transfers` into queue `sync_transfers` every 15s.
 2. **sync_transfers**:
    - Reads `last_block` from `sync_state`.
    - Gets `head` via `module=proxy&action=eth_blockNumber`.
