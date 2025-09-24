@@ -20,7 +20,7 @@ services:
   worker:
     build:
       context: ../services/worker
-    container_name: usde_tracker_worker
+    # container_name: usde_tracker_worker # comment out for --scale worker = 3
     restart: always
     env_file:
       - ../.env
