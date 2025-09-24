@@ -1,0 +1,6 @@
+rq
+rq-scheduler
+redis
+psycopg[binary]
+requests
+python-dotenv

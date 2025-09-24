@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: usde_tracker_postgres
+    restart: always
+    env_file:
+      - ../.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: usde_tracker_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  worker:
+    build:
+      context: ../services/worker
+    container_name: usde_tracker_worker
+    restart: always
+    env_file:
+      - ../.env
+    depends_on:
+      - postgres
+      - redis
+    command: ["/app/run.sh"]
+
+  scheduler:
+    build: { context: ../services/worker }
+    depends_on:
+      - redis
+    env_file:
+      - ../.env
+    container_name: usde_tracker_scheduler
+    command:
+      [
+        "bash",
+        "-lc",
+        "python /app/schedule.py && exec rqscheduler -H redis -p 6379 -i 1",
+      ]
+
+volumes:
+  pgdata:
