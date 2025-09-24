@@ -1,5 +1,5 @@
 import os, requests, psycopg, redis
-from rq import Queue
+from rq import Queue, Retry
 from typing import Dict, Any
 
 ETHERSCAN_API_URL = os.environ["ETHERSCAN_API_URL"]
@@ -115,7 +115,8 @@ def parse_transfer(log: Dict[str, Any]):
     try:
         bn = int(log["blockNumber"], 16)
         tx = log["transactionHash"]
-        li = int(log["logIndex"], 16)
+        li_hex = log.get("logIndex", "0x")
+        li = int(li_hex, 16) if li_hex not in ("0x", None, "") else 0
         topics = log.get("topics", [])
         if not topics or topics[0].lower() != TRANSFER_TOPIC:
             return  # not a Transfer
@@ -158,8 +159,35 @@ def parse_transfer(log: Dict[str, Any]):
                 "jobs.calc_balance_by_transfers",
                 addr.hex(),
                 job_timeout=180,
-                retry=None,
+                retry=Retry(max=3),
+                result_ttl=86400,  # 1 day
+                failure_ttl=86400 * 7,  # 7 days
+                # job_id=f"balance:{addr.hex()}",
             )
 
     except Exception as e:
         print(f"[parse_transfer] error: {e}")
+
+
+def calc_balance_by_transfers(addr_hex: str):
+    """Recompute balance for one address from deltas and upsert into balances."""
+    addr = bytes.fromhex(addr_hex)
+    with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (addr_hex,))
+
+            cur.execute(
+                "SELECT COALESCE(SUM(amount), 0) FROM deltas WHERE address = %s",
+                (addr,),
+            )
+            balance = cur.fetchone()[0] or 0
+
+            cur.execute(
+                """
+                INSERT INTO balances(address, balance)
+                VALUES (%s, %s)
+                ON CONFLICT (address) DO UPDATE SET balance = EXCLUDED.balance
+                """,
+                (addr, balance),
+            )
+    print(f"[calc_balance_by_transfers] {addr_hex} = {balance}")

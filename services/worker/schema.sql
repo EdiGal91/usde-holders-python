@@ -20,3 +20,6 @@ CREATE TABLE IF NOT EXISTS balances (
   address BYTEA PRIMARY KEY,
   balance NUMERIC(78,0) NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS deltas_address_idx ON deltas(address);
+CREATE INDEX IF NOT EXISTS deltas_block_idx   ON deltas(block_number);
