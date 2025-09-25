@@ -60,38 +60,48 @@ CONFIRMATIONS=12
 
 ---
 
-## Run (Docker)
+## One-time setup
 
-Build & start all services:
+Make the worker entrypoint executable:
 
 ```bash
-docker compose -f infra/compose.yml up -d --build
+chmod +x services/worker/run.sh
+```
+
+---
+
+## Run (Docker)
+
+Build & start all services (example scales workers to 16):
+
+```bash
+docker compose up -d --build --scale worker=16
 ```
 
 Tail logs:
 
 ```bash
-# worker logs
-docker logs -f usde_tracker_worker
+# worker logs (all replicas)
+docker compose logs -f worker
 
 # scheduler logs
-docker logs -f usde_tracker_scheduler
+docker compose logs -f scheduler
 
 # postgres / redis
-docker logs -f usde_tracker_postgres
-docker logs -f usde_tracker_redis
+docker compose logs -f postgres
+docker compose logs -f redis
 ```
 
 Stop services (keep data volumes):
 
 ```bash
-docker compose -f infra/compose.yml down
+docker compose down
 ```
 
 Stop **and delete** volumes (reset DB/Redis data):
 
 ```bash
-docker compose -f infra/compose.yml down -v
+docker compose down -v
 ```
 
 > Use `-v` when you want a **clean slate** (e.g., reset `last_block` to 0).
@@ -99,7 +109,7 @@ docker compose -f infra/compose.yml down -v
 Rebuild after code changes (worker/scheduler):
 
 ```bash
-docker compose -f infra/compose.yml up -d --build
+docker compose up -d --build
 ```
 
 ---
@@ -111,7 +121,7 @@ We use [RQ Dashboard](https://github.com/Parallels/rq-dashboard) to monitor queu
 ### Start Dashboard
 
 ```bash
-docker compose -f infra/compose.yml up -d rqdashboard
+docker compose up -d rqdashboard
 ```
 
 Open http://localhost:9181 in your browser.

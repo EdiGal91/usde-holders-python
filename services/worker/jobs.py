@@ -11,7 +11,7 @@ REDIS_URL = os.environ["REDIS_URL"]
 
 TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 ZERO_ADDR = "0x" + "0" * 64  # indexed zero address in topics
-OFFSET = 1000
+OFFSET = 200
 
 
 r = redis.from_url(REDIS_URL)

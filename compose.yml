@@ -4,7 +4,7 @@ services:
     container_name: usde_tracker_postgres
     restart: always
     env_file:
-      - ../.env
+      - .env
     ports:
       - "5432:5432"
     volumes:
@@ -19,22 +19,22 @@ services:
 
   worker:
     build:
-      context: ../services/worker
+      context: services/worker
     # container_name: usde_tracker_worker # comment out for --scale worker = 3
     restart: always
     env_file:
-      - ../.env
+      - .env
     depends_on:
       - postgres
       - redis
     command: ["/app/run.sh"]
 
   scheduler:
-    build: { context: ../services/worker }
+    build: { context: services/worker }
     depends_on:
       - redis
     env_file:
-      - ../.env
+      - .env
     container_name: usde_tracker_scheduler
     command:
       [
@@ -55,5 +55,40 @@ services:
     ports:
       - "9181:9181"
 
+  api:
+    build:
+      context: services/api
+    image: infra-api
+    env_file: [.env]
+    depends_on: [postgres]
+    ports: ["8000:8000"]
+    volumes:
+      - ./services/api/app:/app/app:ro
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
+
+  web:
+    image: node:22-bookworm-slim
+    working_dir: /app
+    env_file: [.env]
+    environment:
+      CHOKIDAR_USEPOLLING: "1"
+      VITE_API_BASE: "http://localhost:8000"
+    volumes:
+      - ./services/web:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
 volumes:
   pgdata:

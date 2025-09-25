@@ -23,3 +23,4 @@ CREATE TABLE IF NOT EXISTS balances (
 
 CREATE INDEX IF NOT EXISTS deltas_address_idx ON deltas(address);
 CREATE INDEX IF NOT EXISTS deltas_block_idx   ON deltas(block_number);
+CREATE INDEX IF NOT EXISTS balances_balance_desc_idx ON balances (balance DESC, address ASC);
